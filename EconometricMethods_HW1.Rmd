@@ -1,0 +1,101 @@
+```{r}
+# Q1: 針對每項參數做 Estimated Normal Density Function 和時間序列
+data <- read.csv("Equity_Premium.csv")
+target <- as.numeric(unlist(data["x_ntis"]))
+
+# 畫直方圖，並把 Estimated Normal Density Function 加上
+hist(target, breaks = 30, probability = TRUE, col = "lightblue", main = "Estimated Normal Density Distribution", xlab = "x_ntis")
+curve(dnorm(x, mean = mean(target), sd = sd(target)), col = "red", lwd = 2, add = TRUE)
+
+#因數據提供的時間為字串，為圖形美觀，先將其轉為 Date 格式
+Time_unprocessed <- data$Time
+year_month_str <- paste0(substr(Time_unprocessed, 1, 4), "-", substr(Time_unprocessed, 5, 6), "-01")
+Time <- as.Date(year_month_str)
+
+# 畫時間序列圖
+plot(Time, target, type = "o", col = "blue", pch = 16, cex = 0.7, xlab = "Time", ylab = "value", main = "Time Series")
+grid(col = "lightgray", lty = "dotted", )
+```
+
+
+```{r}
+# Q2. Given the same size n and the X defined in this running example, please show 2.1 trace(X(X’X)^(-1) X’), 2.2 trace(I - X(X’X)^(-1) X’)
+
+X <- as.matrix(data[3:13]) # 將 X 參數項獨立拿出
+Xt <- t(X) # 製作 X 的轉置矩陣
+target <- X %*% solve(Xt %*% X) %*% Xt 
+sum(diag(target)) # trace 為對角線值相加
+
+I <- diag(504) # 製作符合樣本大小之單位矩陣
+target_I <- I - (X %*% solve(Xt %*% X) %*% Xt)
+sum(diag(target_I))
+```
+
+```{r}
+# Q3. Following #2, let גj be an eigenvalue of X’X, for j = 1, 2, ……, k.Please show the “scree plot” of the eigenvalues. (The horizontal axis is j, and the vertical axis is גj.
+
+# 計算特徵值與特徵向量
+eigen_result <- eigen(Xt %*% X)
+
+# 提取特征值
+eigenvalues <- eigen_result$values
+eigenvalues
+```
+
+```{r}
+# 利用 ggplot 畫出 scree plot
+library(ggplot2)
+scree_plot <- data.frame(column=c(1:11), eigenvalue = eigenvalues)
+ggplot(scree_plot, mapping = aes(x = column, y = eigenvalue)) + geom_line() + geom_point() + ylim(0, 12000) + scale_x_continuous(breaks = 1:11)
+
+```
+
+```{r}
+# Q4. Following #3, let Ẋ  be a n * k matrix. The jth column of Ẋ is defined by “standardizing” the jth column of X, with the sample mean 0 and the sample variance 1, for each j. Please compare the scree plot of the eigenvalues of Ẋ^(-1) * Ẋ with that of ẊẊ^(-1)
+
+# 將數據先做標準化
+data_standardize <- as.data.frame(scale(data[3:13]))
+data_standardize
+
+# 製作標準化後矩陣，並求出其轉置矩陣
+Ẋ <- as.matrix(data_standardize)
+Ẋt <- t(Ẋ)
+dim(Ẋ)
+target <- Ẋ %*% solve(Ẋt %*% Ẋ) %*% Ẋt
+sum(diag(target)) # trace 為對角線值相加
+
+# 求出特徵值
+eigen_result <- eigen(Ẋt %*% Ẋ)
+eigenvalues <- eigen_result$values
+
+# 畫出 Scree plot
+scree_plot <- data.frame(column=c(1:11), eigenvalue = eigenvalues)
+scree_plot
+ggplot(scree_plot, mapping = aes(x = column, y = eigenvalue)) + geom_line() + geom_point() + ylim(0, 3000) + scale_x_continuous(breaks = 1:11)
+```
+
+```{r}
+# Q5. Following #4, please compute A = inverse of (Ẋt * Ẋ) using the spectral decomposition and verify that A * inverse of A = I
+A <- solve(Ẋt %*% Ẋ)
+sol <- A %*% solve(A)
+sol
+```
+
+```{r}
+#Q6. Following #5, let y be a n * 1 vector. The ith element of y correspond to the ith observation of y, for I = 1, 2, ….., n. Consider the linear equation: y = Ẋb, where b is a k * 1 vector, please show b = ?
+# 因為要用過去的參數來預測下一期的報酬，所以需要先將ｙ的期數往前挪一期再做線性回歸，並將其他預測參數的最後一期拿掉，因為沒有更近一期的 y 可供預測
+y <- data$y
+y <- y[-1] # 拿掉最後一項
+data_reset <- data[-nrow(data), ] # 拿掉最後一個row，因為無法預測
+data_reset <- data_reset[, -c(1, 2)] # 拿掉時間跟原本的 y，用不到
+data_reset
+
+# 做線性回歸
+regression <- lm(y ~ data_reset$x_dfy + data_reset$x_infl + data_reset$x_svar 
+                 + data_reset$x_tms + data_reset$x_tbl + data_reset$x_dfr
+                 + data_reset$x_dp + data_reset$x_ltr + data_reset$x_ep
+                 + data_reset$x_bmr + data_reset$x_ntis, data = data_reset)
+b <- matrix(regression$coefficients)
+b <- b[-length(b)] # 題目不需要截距項，將其去除
+b
+```
