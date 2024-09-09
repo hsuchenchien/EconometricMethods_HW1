@@ -51,18 +51,14 @@ ggplot(scree_plot, mapping = aes(x = column, y = eigenvalue)) + geom_line() + ge
 ```
 
 ```{r}
-# Q4. Following #3, let Ẋ  be a n * k matrix. The jth column of Ẋ is defined by “standardizing” the jth column of X, with the sample mean 0 and the sample variance 1, for each j. Please compare the scree plot of the eigenvalues of Ẋ^(-1) * Ẋ with that of ẊẊ^(-1)
+# Q4. Following #3, let Ẋ  be a n * k matrix. The jth column of Ẋ is defined by “standardizing” the jth column of X, with the sample mean 0 and the sample variance 1, for each j. Please compare the scree plot of the eigenvalues of Ẋt * Ẋ with that of Ẋ * Ẋt
 
 # 將數據先做標準化
 data_standardize <- as.data.frame(scale(data[3:13]))
-data_standardize
 
 # 製作標準化後矩陣，並求出其轉置矩陣
 Ẋ <- as.matrix(data_standardize)
 Ẋt <- t(Ẋ)
-dim(Ẋ)
-target <- Ẋ %*% solve(Ẋt %*% Ẋ) %*% Ẋt
-sum(diag(target)) # trace 為對角線值相加
 
 # 求出特徵值
 eigen_result <- eigen(Ẋt %*% Ẋ)
@@ -70,9 +66,21 @@ eigenvalues <- eigen_result$values
 
 # 畫出 Scree plot
 scree_plot <- data.frame(column=c(1:11), eigenvalue = eigenvalues)
-scree_plot
 ggplot(scree_plot, mapping = aes(x = column, y = eigenvalue)) + geom_line() + geom_point() + ylim(0, 3000) + scale_x_continuous(breaks = 1:11)
 ```
+
+```{r}
+# 依據題目要求，求出 Ẋ * Ẋt 的scree plot
+
+# 求出特徵值
+eigen_result_2 <- eigen(Ẋ %*% Ẋt)
+eigenvalues_2 <- eigen_result_2$values
+
+# 畫出 Scree plot
+scree_plot_2 <- data.frame(column=c(1:504), eigenvalue = eigenvalues_2)
+ggplot(scree_plot_2, mapping = aes(x = column, y = eigenvalue)) + geom_line() + ylim(-1, 2000)
+```
+
 
 ```{r}
 # Q5. Following #4, please compute A = inverse of (Ẋt * Ẋ) using the spectral decomposition and verify that A * inverse of A = I
